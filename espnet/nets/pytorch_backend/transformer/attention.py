@@ -75,6 +75,7 @@ class MultiHeadedAttention(nn.Module):
         """
         n_batch = value.size(0)
         if mask is not None:
+            # import pdb; pdb.set_trace()
             mask = mask.unsqueeze(1)
             mask = (~mask)*-10000
             scores = scores + mask 

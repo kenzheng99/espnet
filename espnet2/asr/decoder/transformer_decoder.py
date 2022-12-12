@@ -173,6 +173,7 @@ class BaseTransformerDecoder(AbsDecoder, BatchScorerInterface):
                 x, tgt_mask, memory, None, cache=c
             )
             new_cache.append(x)
+            x = x[:, 1:, :]
 
         if self.normalize_before:
             y = self.after_norm(x[:, -1])

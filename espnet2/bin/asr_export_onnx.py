@@ -15,7 +15,7 @@ def get_decoder_dummy_inputs(enc_size, decoder):
     tgt = torch.LongTensor([0, 0]).unsqueeze(0)
     enc_out = torch.randn(1, 100, enc_size)
     cache = [
-        torch.zeros((1, 1, decoder.decoders[0].size))
+        torch.zeros((1, 2, decoder.decoders[0].size))
         for _ in range(len(decoder.decoders))
     ]
     # pdb.set_trace()
@@ -243,11 +243,11 @@ def export(asr_train_config: str, asr_model_file: str, test_wav: str):
     feats_lens = feats_lens.long()
 
     # export onnx encoder
-    export_encoder(
-        asr_model.encoder,
-        feats_dim=feats.shape[-1],
-        test_input=(feats, feats_lens),
-    )
+    # export_encoder(
+    #     asr_model.encoder,
+    #     feats_dim=feats.shape[-1],
+    #     test_input=(feats, feats_lens),
+    # )
 
     # export CTC
     # export_ctc(
