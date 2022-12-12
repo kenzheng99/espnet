@@ -7,7 +7,45 @@ import torch
 
 from espnet2.tasks.asr import ASRTask
 from espnet2.utils import config_argparse
+from espnet.nets.scorers.ctc import CTCPrefixScorer
+from espnet.nets.beam_search import BeamSearch, Hypothesis
+from espnet.nets.scorers.length_bonus import LengthBonus
 
+def get_decoder_dummy_inputs(enc_size, decoder):
+    tgt = torch.LongTensor([0, 0]).unsqueeze(0)
+    enc_out = torch.randn(1, 100, enc_size)
+    cache = [
+        torch.zeros((1, 1, decoder.decoders[0].size))
+        for _ in range(len(decoder.decoders))
+    ]
+    # pdb.set_trace()
+    mask = torch.BoolTensor(1,2,2)
+    return (tgt, mask, enc_out, cache)
+
+def get_dynamic_axes(decoder):
+    ret = {
+            'tgt': {
+                0: 'tgt_batch',
+                1: 'tgt_length'
+            },
+            'tgt_mask': {
+                0: 'tgt_mask_batch',
+                1: 'tgt_mask_length',
+                2: 'tgt_mask_length',
+            },
+            'memory': {
+                0: 'memory_batch',
+                1: 'memory_length'
+            }
+        }
+    ret.update({
+        'cache_%d' % d: {
+            0: 'cache_%d_batch' % d,
+            1: 'cache_%d_length' % d
+        }
+        for d in range(len(decoder.decoders))
+    })
+    return ret
 
 def export_encoder(encoder, feats_dim, out_filename="encoder.onnx", test_input=None):
     """
@@ -63,6 +101,82 @@ def export_encoder(encoder, feats_dim, out_filename="encoder.onnx", test_input=N
     assert np.allclose(enc_out, onnx_enc_out, atol=1e-5)
     mse = ((enc_out - onnx_enc_out) ** 2).mean()
     print(f"encoder successfully exported to {out_filename}, mse={mse}")
+
+
+def export_decoder(asr_model, enc_out_size, out_name="decoder.onnx", test_input=None):
+    
+    print("exporting decoder now")
+    decoder = asr_model.decoder
+    decoder.forward = decoder.forward_one_step
+    ctc_weight = asr_model.ctc_weight
+    scorers = {}
+    device = "cpu"
+
+    ctc = CTCPrefixScorer(ctc=asr_model.ctc, eos=asr_model.eos)
+    token_list = asr_model.token_list
+    scorers.update(
+        decoder=decoder,
+        ctc=ctc,
+        length_bonus=LengthBonus(len(token_list)),
+    )
+
+    beam_search_transducer = None
+    hugging_face_model = None
+    hugging_face_linear_in = None
+    lm_weight = 1.0
+    ngram_weight = 0.9
+    penalty = 0.0
+    beam_size = 20
+    dtype="float32"
+    maxlenratio = 0.0
+    minlenratio = 0.0
+
+    weights = dict(
+        decoder=1.0 - ctc_weight,
+        ctc=ctc_weight,
+        lm=lm_weight,
+        ngram=ngram_weight,
+        length_bonus=penalty,
+    )
+
+    beam_search = BeamSearch(
+        beam_size=beam_size,
+        weights=weights,
+        scorers=scorers,
+        sos=asr_model.sos,
+        eos=asr_model.eos,
+        vocab_size=len(token_list),
+        token_list=token_list,
+        pre_beam_score_key=None if ctc_weight == 1.0 else "full",
+    )
+
+    beam_search.to(device=device, dtype=getattr(torch, dtype)).eval()
+    # pdb.set_trace()
+
+    # nbest_hyps = beam_search(x=torch.tensor(enc), maxlenratio=maxlenratio, minlenratio=minlenratio)
+
+    decoder_inputs = ['tgt', 'tgt_mask', 'memory'] \
+            + ['cache_%d' % i for i in range(len(decoder.decoders))]
+    
+    decoder_outputs = ['y'] + ['out_cache_%d' % i for i in range(len(decoder.decoders))]
+
+    dummy_input_decoder = get_decoder_dummy_inputs(enc_out_size, decoder)
+
+    dynamic_axes = get_dynamic_axes(decoder)
+
+    torch.onnx.export(
+        decoder,
+        dummy_input_decoder,
+        out_name,
+        verbose=False,
+        opset_version=15,
+        input_names=decoder_inputs,
+        output_names=decoder_outputs,
+        dynamic_axes=dynamic_axes,
+    )
+
+    print("exported onnx decoder")
+
 
 
 def export_ctc(ctc, enc_out_dim, out_filename="ctc.onnx", test_input=None):
@@ -136,9 +250,15 @@ def export(asr_train_config: str, asr_model_file: str, test_wav: str):
     )
 
     # export CTC
-    export_ctc(
-        asr_model.ctc,
-        enc_out_dim=asr_model.encoder.encoders[0].size,
+    # export_ctc(
+    #     asr_model.ctc,
+    #     enc_out_dim=asr_model.encoder.encoders[0].size,
+    # )
+
+    # export decoder
+    export_decoder(
+        asr_model,
+        asr_model.encoder.encoders[0].size,
     )
 
 
