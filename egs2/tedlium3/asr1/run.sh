@@ -7,12 +7,12 @@ set -o pipefail
 
 train_set="train"
 valid_set="dev"
-test_sets="test_chunk"
+test_sets="test"
 
-asr_config=conf/train_asr_tedlium.yaml
+asr_config=conf/train_asr_tedlium_conformer_spectral.yaml
 bpe_train_text=dump/raw/train_sp/text
-lm_config=conf/train_lm.yaml
-use_lm=true
+# lm_config=conf/train_lm.yaml
+use_lm=false
 use_wordlm=false
 
 # speed perturbation related
@@ -21,19 +21,17 @@ speed_perturb_factors="0.9 1.0 1.1"
 
 ./asr.sh                                               \
     --lang en                                          \
-    --audio_format flac                                 \
+    --audio_format flac                                \
     --feats_type raw                                   \
-    --token_type bpe                                  \
+    --token_type bpe                                   \
     --nbpe 500                                         \
-    --stage 1 \
-    --feats_normalize utterance_mvn\
-    --bpe_train_text ${bpe_train_text}        \
+    --stage 11                                         \
+    --feats_normalize utterance_mvn                    \
+    --bpe_train_text ${bpe_train_text}                 \
     --use_lm ${use_lm}                                 \
-    --use_word_lm ${use_wordlm}                        \
-    --lm_config "${lm_config}"                         \
     --asr_config "${asr_config}"                       \
     --train_set "${train_set}"                         \
     --valid_set "${valid_set}"                         \
     --test_sets "${test_sets}"                         \
     --speed_perturb_factors "${speed_perturb_factors}" \
-    --lm_train_text "data/${train_set}/text" "$@"
+    --ngpu 8 \
