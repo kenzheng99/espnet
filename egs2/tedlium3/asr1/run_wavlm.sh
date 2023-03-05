@@ -25,7 +25,6 @@ speed_perturb_factors="0.9 1.0 1.1"
     --feats_type raw                                   \
     --token_type bpe                                   \
     --nbpe 500                                         \
-    --stage 11                                         \
     --feats_normalize utterance_mvn                    \
     --bpe_train_text ${bpe_train_text}                 \
     --use_lm ${use_lm}                                 \
@@ -34,4 +33,5 @@ speed_perturb_factors="0.9 1.0 1.1"
     --valid_set "${valid_set}"                         \
     --test_sets "${test_sets}"                         \
     --speed_perturb_factors "${speed_perturb_factors}" \
-    --ngpu 8 \
+    --ngpu 4                                           \
+    --stage 12                                         \

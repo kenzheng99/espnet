@@ -9,7 +9,7 @@ train_set="train"
 valid_set="dev"
 test_sets="test"
 
-asr_config=conf/train_asr_tedlium_conformer_spectral.yaml
+asr_config=conf/train_asr_tedlium_conformer_spectral_12.yaml
 # bpe_train_text=dump/raw/train_sp/text
 # lm_config=conf/train_lm.yaml
 use_lm=false

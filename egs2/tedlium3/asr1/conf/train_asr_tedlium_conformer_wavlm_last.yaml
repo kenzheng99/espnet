@@ -1,8 +1,7 @@
 # This configuration requires Tesla V100-SXM2(32GB) x 8 GPUs It takes about 4 days.
 batch_type: length
-# batch_bins: 200000000 # 8x gpu
-batch_bins: 100000000 # 4x gpu
-# batch_bins: 25000000 # 1x gpu
+# batch_bins: 30000000 # 8x gpu
+batch_bins: 15000000 # 4x gpu
 
 accum_grad: 1
 max_epoch: 33
@@ -17,6 +16,23 @@ best_model_criterion:
 keep_nbest_models: 10
 log_interval: 100
 # num_workers: 9
+
+frontend: s3prl
+frontend_conf:
+    frontend_conf:
+        upstream: wavlm_large  # Note: If the upstream is changed, please change the input_size in the preencoder.
+    download_dir: ./hub
+    multilayer_feature: false
+
+unused_parameters: false 
+freeze_param:
+    - "frontend.upstream"
+    - "frontend.featurizer"
+
+preencoder: linear
+preencoder_conf:
+    input_size: 1024  # Note: If the upstream is changed, please change this value accordingly.
+    output_size: 80
 
 encoder: conformer
 encoder_conf:
@@ -61,12 +77,6 @@ scheduler_conf:
         
 ctc_conf:
     ignore_nan_grad: true
-
-frontend_conf:
-  n_fft: 512
-  hop_length: 256
-
-unused_parameters: false 
 
 specaug: specaug
 specaug_conf:

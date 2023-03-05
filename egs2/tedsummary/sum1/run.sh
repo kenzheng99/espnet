@@ -7,7 +7,9 @@ set -o pipefail
 train_set="train"
 valid_set="valid"
 test_sets="test"
-asr_config=conf/train_sum_conformer_lf.yaml
+asr_config=conf/train_asr_tedlium_conformer_spectral.yaml
+# asr_config=conf/train_sum_conformer_lf.yaml
+
 inference_config=conf/decode_sum.yaml
 
 feats_type="raw"
@@ -24,8 +26,6 @@ use_lm=false
 
 ./asr.sh \
     --lang en \
-    --stage 2 \
-    --stop_stage 4 \
     --feats_type ${feats_type} \
     --token_type ${token_type} \
     --speed_perturb_factors "0.9 1.0 1.1" \
@@ -39,4 +39,7 @@ use_lm=false
     --valid_set "${valid_set}" \
     --max_wav_duration 100000000000 \
     --test_sets "${test_sets}" \
-    --bpe_train_text "data/${train_set}/text" "$@"
+    --bpe_train_text "data/${train_set}/text" "$@" \
+    --stage 10 \
+    --stop_stage 10 \
+    --nj 1
